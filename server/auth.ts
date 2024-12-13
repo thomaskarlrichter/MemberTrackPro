@@ -233,7 +233,7 @@ export function setupAuth(app: Express) {
       .replace(/\//g, '_')
       .replace(/=/g, '');
     
-    const lnurlAuthUrl = `lnurl1${bech32Url}`;
+    const lnurlAuthUrl = `LNURL${bech32Url}`;
     
     res.json({ k1, lnurlAuthUrl });
   });
