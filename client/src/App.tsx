@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Link } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +9,7 @@ import MembersPage from "./pages/MembersPage";
 import ProfilePage from "./pages/ProfilePage";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -31,10 +32,18 @@ function Router() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Member Portal</h1>
           <div className="flex gap-4">
-            <Link href="/">Dashboard</Link>
-            <Link href="/events">Events</Link>
-            <Link href="/members">Members</Link>
-            <Link href="/profile">Profile</Link>
+            <Button variant="ghost" asChild>
+              <Link href="/">Dashboard</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/events">Events</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/members">Members</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/profile">Profile</Link>
+            </Button>
           </div>
         </div>
       </nav>
