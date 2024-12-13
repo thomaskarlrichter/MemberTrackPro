@@ -7,7 +7,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "../db";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -58,6 +58,7 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Configure Local Strategy
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
@@ -80,6 +81,36 @@ export function setupAuth(app: Express) {
       }
     })
   );
+
+  // Custom LNURL authentication function
+  async function authenticateLightningUser(linkingKey: string): Promise<SelectUser | null> {
+    try {
+      let [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.lnurlKey, linkingKey))
+        .limit(1);
+
+      if (!user) {
+        // Create new user if none exists
+        [user] = await db
+          .insert(users)
+          .values({
+            username: `lightning_${linkingKey.slice(0, 8)}`,
+            lnurlKey: linkingKey,
+            name: `Lightning User ${linkingKey.slice(0, 8)}`,
+            email: `${linkingKey.slice(0, 8)}@lightning.user`,
+            password: await crypto.hash(randomBytes(32).toString('hex')),
+          })
+          .returning();
+      }
+
+      return user;
+    } catch (err) {
+      console.error('Lightning authentication error:', err);
+      return null;
+    }
+  }
 
   passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -172,6 +203,73 @@ export function setupAuth(app: Express) {
       }
       res.json({ message: "Logout successful" });
     });
+  });
+
+  // LNURL Auth Routes
+  const lnurlSessions = new Map();
+
+  app.get("/api/auth/lnurl", (req, res) => {
+    const k1 = randomBytes(32).toString('hex');
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const callbackUrl = `${baseUrl}/api/auth/lnurl/callback`;
+    
+    // Store session for verification
+    lnurlSessions.set(k1, {
+      timestamp: Date.now(),
+      authenticated: false
+    });
+
+    const lnurlAuthUrl = `lightning:${callbackUrl}?tag=login&k1=${k1}&action=login`;
+    
+    res.json({ k1, lnurlAuthUrl });
+  });
+
+  app.get("/api/auth/lnurl/status/:k1", (req, res) => {
+    const session = lnurlSessions.get(req.params.k1);
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    
+    // Clean up old session if authenticated
+    if (session.authenticated) {
+      lnurlSessions.delete(req.params.k1);
+    }
+    
+    res.json({ authenticated: session.authenticated });
+  });
+
+  app.get("/api/auth/lnurl/callback", async (req, res) => {
+    const { k1, sig, key } = req.query;
+    
+    if (!k1 || !sig || !key) {
+      return res.status(400).json({ status: "ERROR", reason: "Missing parameters" });
+    }
+
+    const session = lnurlSessions.get(k1);
+    if (!session) {
+      return res.status(404).json({ status: "ERROR", reason: "Session not found" });
+    }
+
+    try {
+      const user = await authenticateLightningUser(key as string);
+      if (!user) {
+        return res.status(400).json({ status: "ERROR", reason: "Authentication failed" });
+      }
+
+      // Log the user in
+      await new Promise((resolve, reject) => {
+        req.login(user, (err) => {
+          if (err) reject(err);
+          resolve(true);
+        });
+      });
+
+      session.authenticated = true;
+      res.json({ status: "OK" });
+    } catch (error) {
+      console.error('LNURL callback error:', error);
+      res.status(500).json({ status: "ERROR", reason: "Internal server error" });
+    }
   });
 
   app.get("/api/user", (req, res) => {

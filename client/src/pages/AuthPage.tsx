@@ -16,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import QRCode from "qrcode";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -91,9 +93,10 @@ export default function AuthPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="lightning">⚡ Lightning</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -193,9 +196,81 @@ export default function AuthPage() {
                 </form>
               </Form>
             </TabsContent>
+
+            <TabsContent value="lightning">
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-2">Login with Lightning</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Scan the QR code with your Lightning wallet
+                  </p>
+                  <div className="flex justify-center">
+                    <LightningLogin />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function LightningLogin() {
+  const [qrCode, setQrCode] = useState<string>("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    async function fetchLnurlAuth() {
+      try {
+        const response = await fetch("/api/auth/lnurl");
+        if (!response.ok) throw new Error("Failed to get LNURL");
+        const data = await response.json();
+        
+        const qr = await QRCode.toDataURL(data.lnurlAuthUrl);
+        setQrCode(qr);
+
+        // Start polling for authentication status
+        const pollInterval = setInterval(async () => {
+          const statusResponse = await fetch(`/api/auth/lnurl/status/${data.k1}`);
+          const statusData = await statusResponse.json();
+          
+          if (statusData.authenticated) {
+            clearInterval(pollInterval);
+            await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            toast({
+              title: "Success",
+              description: "Successfully logged in with Lightning",
+              duration: 3000,
+            });
+          }
+        }, 2000);
+
+        return () => clearInterval(pollInterval);
+      } catch (error) {
+        console.error("LNURL Auth error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to initiate Lightning login",
+          variant: "destructive",
+        });
+      }
+    }
+
+    fetchLnurlAuth();
+  }, [toast, queryClient]);
+
+  return (
+    <div className="p-4 border rounded-lg">
+      {qrCode ? (
+        <img src={qrCode} alt="Lightning Login QR Code" className="w-64 h-64" />
+      ) : (
+        <div className="w-64 h-64 flex items-center justify-center">
+          <p>Loading QR Code...</p>
+        </div>
+      )}
     </div>
   );
 }
