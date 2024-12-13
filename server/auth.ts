@@ -220,15 +220,15 @@ export function setupAuth(app: Express) {
     });
 
     // Construct LNURL-auth parameters according to spec
-    const params = {
+    const params = new URLSearchParams({
+      k1,
       tag: 'login',
-      k1: k1,
       action: 'auth',
-      callback: callbackUrl
-    };
+    });
+    const fullCallbackUrl = `${callbackUrl}?${params}`;
 
-    // URL encode the parameters
-    const bech32Url = Buffer.from(JSON.stringify(params)).toString('base64')
+    // Encode the full URL in base64
+    const bech32Url = Buffer.from(fullCallbackUrl).toString('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
