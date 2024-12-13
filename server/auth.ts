@@ -219,7 +219,19 @@ export function setupAuth(app: Express) {
       authenticated: false
     });
 
-    const lnurlAuthUrl = `lightning:${callbackUrl}?tag=login&k1=${k1}&action=login`;
+    // Encode callback URL in proper LNURL format
+    const callbackParams = new URLSearchParams({
+      tag: 'login',
+      k1: k1,
+      action: 'login'
+    }).toString();
+    
+    const fullUrl = `${callbackUrl}?${callbackParams}`;
+    const encodedUrl = Buffer.from(fullUrl).toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    const lnurlAuthUrl = `LNURL${encodedUrl}`;
     
     res.json({ k1, lnurlAuthUrl });
   });
