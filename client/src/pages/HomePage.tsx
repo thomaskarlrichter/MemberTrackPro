@@ -6,7 +6,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function HomePage() {
   const { user } = useUser();
-  const { events, isLoading } = useEvents();
+  const { events } = useEvents();
+
+  if (!user) {
+    return null;
+  }
 
   const upcomingEvents = events?.filter(e => new Date(e.date) > new Date()) || [];
 
