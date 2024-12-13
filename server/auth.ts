@@ -34,9 +34,14 @@ export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID || "member-portal-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {},
+    resave: true,
+    saveUninitialized: true,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: false, // Set to true in production
+      httpOnly: true,
+      sameSite: 'lax'
+    },
     store: new MemoryStore({
       checkPeriod: 86400000,
     }),

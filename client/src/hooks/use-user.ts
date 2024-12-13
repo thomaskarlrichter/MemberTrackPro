@@ -23,23 +23,35 @@ async function handleRequest(
   try {
     const response = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
       body: body ? JSON.stringify(body) : undefined,
       credentials: "include",
     });
 
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+    
     if (!response.ok) {
       if (response.status >= 500) {
-        return { ok: false, message: response.statusText };
+        return { ok: false, message: "Server error occurred" };
       }
 
-      const message = await response.text();
+      const message = isJson ? (await response.json()).message : await response.text();
       return { ok: false, message };
+    }
+
+    if (isJson) {
+      const data = await response.json();
+      return { ok: true, ...data };
     }
 
     return { ok: true };
   } catch (e: any) {
-    return { ok: false, message: e.toString() };
+    console.error("Request error:", e);
+    return { ok: false, message: "Network error occurred" };
   }
 }
 

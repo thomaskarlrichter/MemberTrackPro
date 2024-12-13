@@ -66,16 +66,19 @@ export default function AuthPage() {
       if (!result.ok) {
         throw new Error(result.message);
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Success",
         description: "Successfully registered",
+        duration: 3000,
       });
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
+        duration: 5000,
       });
     }
   }
