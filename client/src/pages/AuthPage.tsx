@@ -15,6 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -29,6 +30,7 @@ const registerSchema = loginSchema.extend({
 export default function AuthPage() {
   const { login, register } = useUser();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -40,7 +42,15 @@ export default function AuthPage() {
 
   async function onLogin(data: z.infer<typeof loginSchema>) {
     try {
-      await login(data);
+      const result = await login(data);
+      if (!result.ok) {
+        throw new Error(result.message);
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Success",
+        description: "Successfully logged in",
+      });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -52,7 +62,15 @@ export default function AuthPage() {
 
   async function onRegister(data: z.infer<typeof registerSchema>) {
     try {
-      await register(data);
+      const result = await register(data);
+      if (!result.ok) {
+        throw new Error(result.message);
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Success",
+        description: "Successfully registered",
+      });
     } catch (error: any) {
       toast({
         title: "Error",

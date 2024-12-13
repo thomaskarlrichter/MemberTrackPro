@@ -76,22 +76,25 @@ export function useUser() {
 
   const loginMutation = useMutation<RequestResult, Error, LoginData>({
     mutationFn: (userData) => handleRequest('/api/login', 'POST', userData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      return data;
     },
   });
 
   const logoutMutation = useMutation<RequestResult, Error>({
     mutationFn: () => handleRequest('/api/logout', 'POST'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      return data;
     },
   });
 
   const registerMutation = useMutation<RequestResult, Error, LoginData>({
     mutationFn: (userData) => handleRequest('/api/register', 'POST', userData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      return data;
     },
   });
 
