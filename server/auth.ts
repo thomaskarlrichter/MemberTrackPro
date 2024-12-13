@@ -219,19 +219,21 @@ export function setupAuth(app: Express) {
       authenticated: false
     });
 
-    // Encode callback URL in proper LNURL format
-    const callbackParams = new URLSearchParams({
+    // Construct LNURL-auth parameters according to spec
+    const params = {
       tag: 'login',
       k1: k1,
-      action: 'login'
-    }).toString();
-    
-    const fullUrl = `${callbackUrl}?${callbackParams}`;
-    const encodedUrl = Buffer.from(fullUrl).toString('base64')
+      action: 'auth',
+      callback: callbackUrl
+    };
+
+    // URL encode the parameters
+    const bech32Url = Buffer.from(JSON.stringify(params)).toString('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
-    const lnurlAuthUrl = `LNURL${encodedUrl}`;
+    
+    const lnurlAuthUrl = `lnurl1${bech32Url}`;
     
     res.json({ k1, lnurlAuthUrl });
   });
