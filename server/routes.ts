@@ -50,9 +50,28 @@ export function registerRoutes(app: Express) {
     const allEvents = await db.query.events.findMany({
       orderBy: desc(events.date),
       with: {
-        creator: true,
-        approver: true,
-        participants: true,
+        creator: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+        approver: {
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+        participants: {
+          with: {
+            user: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
     res.json(allEvents);
