@@ -221,11 +221,18 @@ function LightningLogin() {
   const [qrCode, setQrCode] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const pollRef = useRef<NodeJS.Timeout>();
+  const abortRef = useRef<AbortController>();
 
   useEffect(() => {
     async function fetchLnurlAuth() {
       try {
-        const response = await fetch("/api/auth/lnurl");
+        abortRef.current?.abort();
+        abortRef.current = new AbortController();
+        
+        const response = await fetch("/api/auth/lnurl", {
+          signal: abortRef.current.signal
+        });
         if (!response.ok) throw new Error("Failed to get LNURL");
         const data = await response.json();
         
@@ -233,23 +240,26 @@ function LightningLogin() {
         setQrCode(qr);
 
         // Start polling for authentication status
-        const pollInterval = setInterval(async () => {
-          const statusResponse = await fetch(`/api/auth/lnurl/status/${data.k1}`);
-          const statusData = await statusResponse.json();
-          
-          if (statusData.authenticated) {
-            clearInterval(pollInterval);
-            await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-            toast({
-              title: "Success",
-              description: "Successfully logged in with Lightning",
-              duration: 3000,
-            });
+        pollRef.current = setInterval(async () => {
+          try {
+            const statusResponse = await fetch(`/api/auth/lnurl/status/${data.k1}`);
+            const statusData = await statusResponse.json();
+            
+            if (statusData.authenticated) {
+              clearInterval(pollRef.current);
+              await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+              toast({
+                title: "Success",
+                description: "Successfully logged in with Lightning",
+                duration: 3000,
+              });
+            }
+          } catch (error) {
+            console.error("Polling error:", error);
           }
         }, 2000);
-
-        return () => clearInterval(pollInterval);
       } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
         console.error("LNURL Auth error:", error);
         toast({
           title: "Error",
@@ -260,7 +270,12 @@ function LightningLogin() {
     }
 
     fetchLnurlAuth();
-  }, [toast, queryClient]);
+    
+    return () => {
+      clearInterval(pollRef.current);
+      abortRef.current?.abort();
+    };
+  }, [toast, queryClient]););
 
   return (
     <div className="p-4 border rounded-lg">
