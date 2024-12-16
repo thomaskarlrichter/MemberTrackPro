@@ -217,6 +217,8 @@ export default function AuthPage() {
   );
 }
 
+import { useRef } from "react";
+
 function LightningLogin() {
   const [qrCode, setQrCode] = useState<string>("");
   const { toast } = useToast();
