@@ -275,7 +275,7 @@ function LightningLogin() {
       clearInterval(pollRef.current);
       abortRef.current?.abort();
     };
-  }, [toast, queryClient]););
+  }, [toast, queryClient]);
 
   return (
     <div className="p-4 border rounded-lg">
