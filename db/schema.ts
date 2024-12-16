@@ -57,7 +57,10 @@ export const interactions = pgTable("interactions", {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
-  roles: many(userRoles),
+  roles: many(userRoles, {
+    fields: [users.id],
+    references: [userRoles.userId],
+  }),
   createdEvents: many(events, { relationName: "creator" }),
   approvedEvents: many(events, { relationName: "approver" }),
   participatedEvents: many(eventParticipants),
