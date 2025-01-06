@@ -1,4 +1,6 @@
-# The WebApp is for supporting a Therapeutic Community to assist with tools for recovery tracking.
+#RecoveryCommunityToolbox
+
+### The WebApp is for supporting a Therapeutic Community to assist with tools for recovery tracking.
 
 It uses as a payment tool the fedi wallet for incentivize feedback inside the TC in V4V
 
